@@ -2,14 +2,16 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/caarlos0/env/v10"
 	"time"
 	"transfers-api/internal/logging"
+
+	"github.com/caarlos0/env/v10"
 )
 
 type Config struct {
 	Business      BusinessConfig `json:"business"`
 	MongoDBConfig MongoDB        `json:"mongodb"`
+	MySQLDBConfig MySQLDB        `json:"mysql"`
 }
 
 type BusinessConfig struct {
@@ -26,11 +28,15 @@ type MongoDB struct {
 	Collection     string        `env:"MONGODB_COLLECTION" envDefault:"transfers" json:"collection"`
 }
 
+type MySQLDB struct {
+}
+
 func ParseFromEnv() *Config {
 	var cfg Config
 	for _, nested := range []interface{}{
 		&cfg.Business,
 		&cfg.MongoDBConfig,
+		&cfg.MySQLDBConfig,
 	} {
 		if err := env.Parse(nested); err != nil {
 			logging.Logger.Fatalf("error parsing config: %v", err)

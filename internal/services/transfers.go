@@ -17,6 +17,9 @@ type TransfersRepository interface {
 	GetByID(ctx context.Context, id string) (models.Transfer, error)
 	Update(ctx context.Context, transfer models.Transfer) error
 	Delete(ctx context.Context, id string) error
+	GetAll(ctx context.Context) ([]models.Transfer, error)
+	GetBySenderID(ctx context.Context, senderID string) ([]models.Transfer, error)
+	GetByReceiverID(ctx context.Context, receiverID string) ([]models.Transfer, error)
 }
 
 type TransfersService struct {
@@ -84,4 +87,28 @@ func (s *TransfersService) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("error deleting transfer %s from repository: %w", id, err)
 	}
 	return nil
+}
+
+func (s *TransfersService) GetAll(ctx context.Context) ([]models.Transfer, error) {
+	transfers, err := s.transfersRepo.GetAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting all transfers from repository: %w", err)
+	}
+	return transfers, nil
+}
+
+func (s *TransfersService) GetBySenderID(ctx context.Context, senderID string) ([]models.Transfer, error) {
+	transfers, err := s.transfersRepo.GetBySenderID(ctx, senderID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting transfers by sender ID %s in repository: %w", senderID, err)
+	}
+	return transfers, nil
+}
+
+func (s *TransfersService) GetByReceiverID(ctx context.Context, receiverID string) ([]models.Transfer, error) {
+	transfers, err := s.transfersRepo.GetByReceiverID(ctx, receiverID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting transfers by receiver ID %s in repository: %w", receiverID, err)
+	}
+	return transfers, nil
 }

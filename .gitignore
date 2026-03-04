@@ -22,3 +22,6 @@ tmp/
 
 # Project
 output/
+
+# Executables
+*.exe

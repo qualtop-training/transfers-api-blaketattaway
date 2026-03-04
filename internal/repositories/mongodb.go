@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"transfers-api/internal/config"
 	"transfers-api/internal/enums"
 	"transfers-api/internal/known_errors"
 	"transfers-api/internal/logging"
 	"transfers-api/internal/models"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type TransfersMongoDBRepo struct {
@@ -140,4 +141,63 @@ func (r *TransfersMongoDBRepo) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("transfer not found: %w", known_errors.ErrNotFound)
 	}
 	return nil
+}
+
+func (r *TransfersMongoDBRepo) GetAll(ctx context.Context) ([]models.Transfer, error) {
+	cursor, err := r.collection.Find(ctx, bson.D{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing transfers: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	return decodeTransfersFromCursor(ctx, cursor)
+}
+
+func (r *TransfersMongoDBRepo) GetBySenderID(ctx context.Context, senderID string) ([]models.Transfer, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{"sender_id": senderID})
+	if err != nil {
+		return nil, fmt.Errorf("error listing transfers by sender ID: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	return decodeTransfersFromCursor(ctx, cursor)
+}
+
+func (r *TransfersMongoDBRepo) GetByReceiverID(ctx context.Context, receiverID string) ([]models.Transfer, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{"receiver_id": receiverID})
+	if err != nil {
+		return nil, fmt.Errorf("error listing transfers by receiver ID: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	return decodeTransfersFromCursor(ctx, cursor)
+}
+
+func decodeTransfersFromCursor(ctx context.Context, cursor *mongo.Cursor) ([]models.Transfer, error) {
+	var transfers []models.Transfer
+
+	for cursor.Next(ctx) {
+		var transfer transferMongoDAO
+		if err := cursor.Decode(&transfer); err != nil {
+			return nil, fmt.Errorf("error decoding transfer: %w", err)
+		}
+		transfers = append(transfers, mapToModel(transfer))
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating transfers cursor: %w", err)
+	}
+
+	return transfers, nil
+}
+
+func mapToModel(transfer transferMongoDAO) models.Transfer {
+	return models.Transfer{
+		ID:         transfer.ID.Hex(),
+		SenderID:   transfer.SenderID,
+		ReceiverID: transfer.ReceiverID,
+		Currency:   enums.ParseCurrency(transfer.Currency),
+		Amount:     transfer.Amount,
+		State:      transfer.State, // TODO: replace with enums.ParseState
+	}
 }

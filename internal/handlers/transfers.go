@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 	"transfers-api/internal/enums"
 	"transfers-api/internal/known_errors"
 	"transfers-api/internal/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 //go:generate mockery --name TransfersService --structname TransfersServiceMock --filename transfers_service_mock.go --output mocks --outpkg mocks
@@ -19,6 +20,9 @@ type TransfersService interface {
 	GetByID(ctx context.Context, id string) (models.Transfer, error)
 	Update(ctx context.Context, transfer models.Transfer) error
 	Delete(ctx context.Context, id string) error
+	GetAll(ctx context.Context) ([]models.Transfer, error)
+	GetBySenderID(ctx context.Context, senderID string) ([]models.Transfer, error)
+	GetByReceiverID(ctx context.Context, receiverID string) ([]models.Transfer, error)
 }
 
 type TransfersHandler struct {
@@ -178,4 +182,46 @@ func (h *TransfersHandler) Delete(ctx *gin.Context) {
 
 	// return ok
 	ctx.JSON(http.StatusOK, gin.H{"id": id})
+}
+
+func (h *TransfersHandler) Find(ctx *gin.Context) {
+	// parse query params
+	senderID := ctx.Query("sender_id")
+	receiverID := ctx.Query("receiver_id")
+
+	switch {
+	case senderID != "":
+		h.executeFinder(ctx, func(c context.Context) ([]models.Transfer, error) {
+			return h.transfersSvc.GetBySenderID(c, senderID)
+		})
+	case receiverID != "":
+		h.executeFinder(ctx, func(c context.Context) ([]models.Transfer, error) {
+			return h.transfersSvc.GetByReceiverID(c, receiverID)
+		})
+	default:
+		h.executeFinder(ctx, func(c context.Context) ([]models.Transfer, error) {
+			return h.transfersSvc.GetAll(c)
+		})
+	}
+}
+
+type TransferFinder func(ctx context.Context) ([]models.Transfer, error)
+
+func (h *TransfersHandler) executeFinder(ctx *gin.Context, finder TransferFinder) {
+	transfers, err := finder(ctx.Request.Context())
+	if err != nil {
+		if errors.Is(err, known_errors.ErrBadRequest) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(transfers) == 0 {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "no transfers found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, transfers)
 }
