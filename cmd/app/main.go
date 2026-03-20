@@ -20,12 +20,12 @@ func main() {
 	logger.Infof("config loaded: %v", cfg.String())
 
 	// init repositories
+	transfersCache := repositories.NewTransfersMemcachedRepository(cfg.MemcachedConfig)
 	transfersDB := repositories.NewTransfersMongoDBRepository(cfg.MongoDBConfig)
-	_ = repositories.NewTransfersMySQLRepository(cfg.MySQLDBConfig)
 	logger.Info("repositories created")
 
 	// init services
-	transfersService := services.NewTransfersService(cfg.Business, transfersDB)
+	transfersService := services.NewTransfersService(cfg.Business, transfersDB, transfersCache)
 	logger.Infof("services created")
 
 	// init handlers

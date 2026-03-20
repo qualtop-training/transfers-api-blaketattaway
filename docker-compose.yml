@@ -12,6 +12,25 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  mysql:
+    image: mysql:8.0
+    container_name: transfers-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: transfers-db
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  memcached:
+    image: memcached:1.6
+    container_name: transfers-memcached
+    restart: always
+    ports:
+      - "11211:11211"
+
   app:
     image: transfers-api:0.1.0
     build:
@@ -20,6 +39,7 @@ services:
     container_name: transfers-api
     depends_on:
       - mongodb
+      - mysql
     ports:
       - "8080:8080"
 
@@ -36,7 +56,16 @@ services:
       MONGODB_DATABASE: transfers-db
       MONGODB_COLLECTION: transfers
 
+      # ---- MySQL ----
+      MYSQL_CONNECT_TIMEOUT: 10s
+      MYSQL_HOSTNAME: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: transfers-db
+
     restart: always
 
 volumes:
   mongo_data:
+  mysql_data:
