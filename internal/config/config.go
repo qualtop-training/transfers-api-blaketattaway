@@ -13,6 +13,7 @@ type Config struct {
 	MongoDBConfig   MongoDB        `json:"mongodb"`
 	MySQLDBConfig   MySQLDB        `json:"mysql"`
 	MemcachedConfig Memcached
+	CCacheConfig    CCache `json:"ccache"`
 }
 
 type BusinessConfig struct {
@@ -43,6 +44,12 @@ type Memcached struct {
 	TTLSeconds int    `env:"MEMCACHED_TTL_SECONDS" envDefault:"60" json:"ttl_seconds"`
 }
 
+type CCache struct {
+	MaxSize        int `env:"CCACHE_MAX_SIZE" envDefault:"5000" json:"max_size"`
+	PercentToPrune int `env:"CCACHE_PERCENT_TO_PRUNE" envDefault:"10" json:"percent_to_prune"`
+	TTLSeconds     int `env:"CCACHE_TTL_SECONDS" envDefault:"60" json:"ttl_seconds"`
+}
+
 func ParseFromEnv() *Config {
 	var cfg Config
 	for _, nested := range []interface{}{
@@ -50,6 +57,7 @@ func ParseFromEnv() *Config {
 		&cfg.MongoDBConfig,
 		&cfg.MySQLDBConfig,
 		&cfg.MemcachedConfig,
+		&cfg.CCacheConfig,
 	} {
 		if err := env.Parse(nested); err != nil {
 			logging.Logger.Fatalf("error parsing config: %v", err)
