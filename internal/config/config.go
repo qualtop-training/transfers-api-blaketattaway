@@ -12,8 +12,9 @@ type Config struct {
 	Business        BusinessConfig `json:"business"`
 	MongoDBConfig   MongoDB        `json:"mongodb"`
 	MySQLDBConfig   MySQLDB        `json:"mysql"`
-	MemcachedConfig Memcached
-	CCacheConfig    CCache `json:"ccache"`
+	MemcachedConfig Memcached      `json:"memcached"`
+	CCacheConfig    CCache         `json:"ccache"`
+	RabbitMQConfig  RabbitMQ       `json:"rabbitmq"`
 }
 
 type BusinessConfig struct {
@@ -50,6 +51,14 @@ type CCache struct {
 	TTLSeconds     int `env:"CCACHE_TTL_SECONDS" envDefault:"60" json:"ttl_seconds"`
 }
 
+type RabbitMQ struct {
+	Hostname  string `env:"RABBITMQ_HOSTNAME" envDefault:"rabbitmq" json:"hostname"`
+	Port      int    `env:"RABBITMQ_PORT" envDefault:"5672" json:"port"`
+	Username  string `env:"RABBITMQ_USERNAME" envDefault:"guest" json:"username"`
+	Password  string `env:"RABBITMQ_PASSWORD" envDefault:"guest" json:"password"`
+	QueueName string `env:"RABBITMQ_QUEUE_NAME" envDefault:"transfers-events" json:"queue_name"`
+}
+
 func ParseFromEnv() *Config {
 	var cfg Config
 	for _, nested := range []interface{}{
@@ -58,6 +67,7 @@ func ParseFromEnv() *Config {
 		&cfg.MySQLDBConfig,
 		&cfg.MemcachedConfig,
 		&cfg.CCacheConfig,
+		&cfg.RabbitMQConfig,
 	} {
 		if err := env.Parse(nested); err != nil {
 			logging.Logger.Fatalf("error parsing config: %v", err)
