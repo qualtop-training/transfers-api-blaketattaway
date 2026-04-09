@@ -31,14 +31,16 @@ func main() {
 
 	// init services
 	transfersService := services.NewTransfersService(cfg.Business, transfersDB, transfersCache, transfersDBPublisher)
+	mqService := services.NewMqService(transfersDBPublisher)
 	logger.Infof("services created")
 
 	// init handlers
 	transfersHandler := handlers.NewTransfersHandler(transfersService)
+	mqHandler := handlers.NewMqHandler(mqService)
 	logger.Infof("handlers created")
 
 	// init server
-	server := transport.NewHTTPServer(transfersHandler)
+	server := transport.NewHTTPServer(transfersHandler, mqHandler)
 	server.MapRoutes()
 	logger.Infof("server created, running %s@%s", version.AppName, version.Version)
 

@@ -32,6 +32,36 @@ func NewRabbitMQClient(cfg config.RabbitMQ) *RabbitMQClient {
 	}
 }
 
+func (c *RabbitMQClient) Read() (string, error) {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return "", fmt.Errorf("failed to open channel: %w", err)
+	}
+	defer ch.Close()
+
+	_, err = ch.QueueDeclare(
+		c.queue,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to declare queue: %w", err)
+	}
+
+	msg, ok, err := ch.Get(c.queue, true)
+	if err != nil {
+		return "", fmt.Errorf("failed to get message: %w", err)
+	}
+	if !ok {
+		return "", fmt.Errorf("no messages in queue")
+	}
+
+	return string(msg.Body), nil
+}
+
 func (c *RabbitMQClient) Publish(operation string, transferID string) error {
 	ch, err := c.conn.Channel()
 	if err != nil {
@@ -41,11 +71,11 @@ func (c *RabbitMQClient) Publish(operation string, transferID string) error {
 
 	_, err = ch.QueueDeclare(
 		c.queue,
-		true,  // durable
-		false, // autoDelete
-		false, // exclusive
-		false, // noWait
-		nil,   // args
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to declare queue: %w", err)
@@ -53,10 +83,10 @@ func (c *RabbitMQClient) Publish(operation string, transferID string) error {
 
 	body := fmt.Sprintf("%s:%s", operation, transferID)
 	err = ch.Publish(
-		"",      // exchange
-		c.queue, // routing key (queue name)
-		false,   // mandatory
-		false,   // immediate
+		"",
+		c.queue,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(body),

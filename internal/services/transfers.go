@@ -12,6 +12,7 @@ import (
 )
 
 //go:generate mockery --name TransfersRepository --structname TransfersRepositoryMock --filename transfers_repository_mock.go --output mocks --outpkg mocks
+//go:generate mockery --name TransfersPublisher --structname TransfersPublisherMock --filename transfers_publisher_mock.go --output mocks --outpkg mocks
 
 type TransfersRepository interface {
 	Create(ctx context.Context, transfer models.Transfer) (string, error)
